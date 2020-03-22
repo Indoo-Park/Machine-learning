@@ -1,0 +1,417 @@
+---
+title: "Neural Networks and Gradient Descent"
+author: "Indoo Park"
+date: "Spring 2019"
+output: html_document
+---
+
+
+For this assignment, we will build and train a simple neural network, using the famous "iris" dataset. We will take the four variables `Sepal.Length`, `Sepal.Width`, `Petal.Length`, and `Petal.Width` to create a prediction for the species.
+
+We will train the network using gradient descent.
+
+## Task 0:
+
+Split the iris data into a training and testing dataset. Scale the data so the numeric variables are all between 0 and 1.
+
+```{r}
+# split between training and testing data
+set.seed(1)
+n <- dim(iris)[1]
+
+rows <- sample(1:n, 0.8*n)
+train <- iris[rows,]
+test <- iris[-rows,]
+
+# write your code here
+train[,1:4] <- t(t(train[,1:4])/apply(train[,1:4],2,max))
+
+test[,1:4] <- 
+t(t(test[,1:4])/apply(test[,1:4],2,max))
+
+```
+
+## Setting up our network
+
+Our neural network will have four neurons in the input layer - one for each numeric variable in the dataset. Our output layer will have three outputs - one for each species. There will be a `Setosa`, `Versicolor`, and `Virginica` node. When the neural network is provided 4 input values, it will produce an output where one of the output nodes has a value of 1, and the other two nodes have a value of 0. This is a similar classification strategy we used for the classification of handwriting digits.
+
+I have arbitrarily chosen to have three nodes in our hidden layer.
+
+We will add bias values before applying the activation function at each of our nodes in the hidden and output layers.
+
+See slides 28-34 in Lecture 3-2.
+
+## Task 1:
+
+How many parameters are present in our model? List how many are present in: weight matrix 1, bias values for the hidden layer, weight matrix 2, and bias values for output layer.
+
+#### Your answer: There are 12 parameters in weight matrix1 and 3 parameters for bias values for the hidden layer, and 9 parameters for weight matrix2, and 3 parameters for bias value for output layer.
+
+
+## Task 2: 
+
+To express the categories correctly, we need to turn the factor labels in species column into vectors of 0s and 1s. For example, an iris of species _setosa_ should be expressed as `1 0 0`. Write some code that will do this. Hint: you can use `as.integer()` to turn a factor into numbers, and then use a bit of creativity to turn those values into vectors of 1s and 0s.
+
+```{r}
+# your code goes here
+train[,5] <- as.integer(train[,5])
+test[,5] <- as.integer(test[,5])
+
+vec_species <- function(i){
+  k<-rep(0,3)
+  k[i]<-1
+  k
+}
+
+train[,5] <- t(apply(matrix(train$Species),1,vec_species))
+test[,5] <- t(apply(matrix(test$Species),1,vec_species))
+
+
+```
+
+
+## Notation
+
+We will define each matrix of values as follows:
+
+$W^{(1)}$ the weights applied to the input layer.
+
+$B^{(1)}$ are the bias values added before activation in the hidden layer.
+
+$W^{(2)}$ the weights applied to the values coming from the hidden layer.
+
+$B^{(2)}$ are the bias values added before the activation function in the output layer.
+
+$J$ is a matrix of 1s so that the bias values in B can be added to all rows.
+
+
+### Sigmoid Activation function
+
+We will use the sigmoid function as our activation function. 
+
+$$f(t) = \frac{1}{1 + e^{-t}}$$
+
+
+## Forward Propagation
+
+$$\underset{N\times 4}{\mathbf{X}} \underset{4 \times 3}{\mathbf{W}^{(1)}} + \underset{N\times 1}{\mathbf{J}}\underset{1\times 3}{\mathbf{B}^{(1)T}} = \underset{N\times 3}{\mathbf{z}^{(2)}}$$
+
+$$f(\underset{N\times 3}{\mathbf{z}^{(2)}}) = \underset{N\times 3}{\mathbf{a}^{(2)}}$$
+
+$$\underset{N\times 3}{\mathbf{a}^{(2)}} \underset{3 \times 3}{\mathbf{W}^{(2)}} + \underset{N\times 1}{\mathbf{J}}\underset{1\times 3}{\mathbf{B}^{(2)T}} = \underset{N\times 3}{\mathbf{z}^{(3)}}$$
+
+$$f(\underset{N\times 3}{\mathbf{z}^{(3)}}) = \underset{N\times 3}{\mathbf{\hat y}}$$
+
+## Easier Notation without bold face and without the dimensions underneath:
+
+$$
+XW^{(1)} + JB^{(1)T} = Z^{(2)}
+$$
+
+$$
+f(Z^{(2)}) = A^{(2)}
+$$
+
+$$
+A^{(2)}W^{(2)} + JB^{(2)T} = Z^{(3)}
+$$
+
+$$
+f(Z^{(3)}) = \hat{Y}
+$$
+
+## Task 3: 
+
+Express the forward propagation as R code using the training data. For now use random uniform values as temporary starting values for the weights and biases.
+
+```{r}
+# your code goes here
+
+input_layer_size <- 4
+hidden_layer_size <- 3
+output_layer_size <- 3
+
+set.seed(1)
+W_1 <- matrix(runif(input_layer_size*output_layer_size)-0.5, nrow = input_layer_size, ncol = hidden_layer_size)
+W_2 <- matrix(runif(hidden_layer_size*output_layer_size)-0.5, nrow = hidden_layer_size, ncol = output_layer_size)
+B_1 <- matrix(runif(3)-0.5, nrow = hidden_layer_size,ncol=1)
+B_2 <- matrix(runif(3)-0.5, nrow = output_layer_size,ncol=1)
+
+#forward propagation
+X <- as.matrix(train[,1:4])
+Y <- as.matrix(train[,5])
+J <- matrix(1, nrow = nrow(X))
+Z_2 <- X %*% W_1 + J %*% t(B_1)
+sigmoid <- function(Z){
+  1/(1 + exp(-Z))
+}
+A_2<- sigmoid(Z_2)
+Z_3 <- A_2 %*% W_2 + J %*% t(B_2)
+Y_hat <- sigmoid(Z_3)
+head(Y_hat)
+```
+
+
+## Back Propagation
+
+The cost function that we will use to evaluate the performance of our neural network will be the squared error cost function:
+
+$$J = 0.5 \sum (y - \hat{y})^2$$
+
+```{r}
+cost <- function(y,y_hat){
+  0.5*sum((y - y_hat)^2)
+}
+```
+
+
+## Task 4: (The hard task)
+
+Find the gradient of the cost function with respect to the parameter matrices. 
+
+You will create four partial derivatives, one for each of ($W^{(1)}, B^{(1)}, W^{(2)}, B^{(2)}$). 
+
+This is known as back propagation. The value of the cost function ($J$) ultimately depends on the data ($X$) and our predictions ($\hat Y$). Our predictions ($\hat Y$) are just a result of a series of operations as seen above. Thus, when you calculate the derivative of the cost function, you will be applying the chain rule for derivatives as you take the derivative with respect to an early element.
+
+Keep in mind that the derivative of $J$ with respect to a matrix will have the same dimensions as the matrix.
+
+I recommend that you do the work on paper by hand, writing the dimensions underneath each component to make sure they align.
+
+I hope the work done for you in Lectures 3-3 and 4-1 will be helpful as a guide to solving this. 
+
+You do not need to show all of your work. You only need to typeset your final answers.
+
+Feel free to work with each other, but don't post your full solutions to the derivatives on Campuswire.
+
+### Your answer:
+
+$$\frac{\partial J }{\partial W^{(2)}} =-({A}^{(2)})^{(T)}*(y-\hat y)*\mathcal{f}'({Z}^{(3)}+{B}^{(2)}) $$
+
+$$\frac{\partial J }{\partial B^{(2)}} = -(1)^{(T)}*(y-\hat y)*f'(Z^{(3)}+B^{(2)})$$
+
+$$\frac{\partial J }{\partial W^{(1)}} = -(X)^{(T)}*(y-\hat y)*f'(Z^{(3)}+B^{(2)})*(W^{(2)})^{(T)}*f'(Z^{(2)}+B^{(1)})$$
+
+
+$$\frac{\partial J }{\partial B^{(1)}} = -(1)^{(T)}*(y-\hat y)*f'(Z^{(3)}+B^{(2)})*(W^{(2)})^{(T)}*f'(Z^{(2)}+B^{(1)})$$
+
+## Task 5: 
+
+Turn your partial derivatives into R code. To make sure you have coded it correctly, it is always a good idea to perform numeric gradient checking, which will be your next task.
+
+```{r}
+# your code goes here
+# delta3 = NULL # See the example handwriting_ann code. this could be useful
+sigmoidprime <- function(Z) {
+    exp(-Z)/((1 + exp(-Z))^2)
+}
+delta3 = -(Y-Y_hat)*sigmoidprime(Z_3)
+
+djdw2 = t(A_2) %*% delta3
+
+djdb2 = t(delta3) %*% J
+
+delta2 = delta3 %*% t(W_2) * sigmoidprime(Z_2)
+djdw1 = t(X) %*% delta2
+
+djdb1 = t(delta2) %*% J
+
+djdb2
+djdb1
+head(djdw1)
+
+```
+
+## Numerical gradient checking
+
+## Task 6:
+
+Perform numeric gradient checking. For the purpose of this homework assignment, show your numeric gradient checking for just the $W^{(1)}$ matrix. You should do numeric gradient checking for all elements in your neural network, but for the sake of keeping the length of this assignment manageable, show your code and results for the first weight matrix only.
+
+To perform numeric gradient checking, create an initial set of parameter values for all of the values (all weight matricies and all bias values). Calculate the predicted values based on these initial parameters, and calculate the cost associated with them. Store this 'initial' cost value.
+
+You will then perturb one element in the $W^{(1)}$ matrix by a small value, say 1e-4. You will then recalculate the predicted values and associated cost. The difference between the new value of the cost function and the initial cost gives us an idea of the change in J. Divide that change by the size of the perturbation (1e-4), and we now have an idea of the slope (partial derivative). You'll repeat this for all of the elements in the $W^{(1)}$ matrix.
+
+See slides 40-43 in lecture 2-2, and the example code in handwriting_ann.R
+
+```{r}
+# your code goes here
+
+# create some initial arbitrary weights for the matrices W1, B1, W2, B2
+set.seed(1)
+W1 <- matrix(runif(input_layer_size*output_layer_size)-0.5, nrow = input_layer_size, ncol = hidden_layer_size)
+W2 <- matrix(runif(hidden_layer_size*output_layer_size)-0.5, nrow = hidden_layer_size, ncol = output_layer_size)
+B1 <- matrix(runif(hidden_layer_size)-0.5, nrow = hidden_layer_size)
+B2 <- matrix(runif(output_layer_size)-0.5, nrow = output_layer_size)
+
+# find the current value of the cost function for these weights
+
+Z2 <- X %*% W1 + J %*% t(B1)
+A2<- sigmoid(Z2)
+Z3 <- A_2 %*% W2 + J %*% t(B2)
+Yhat <- sigmoid(Z3)
+currentcost <- cost(Y,Yhat)
+currentcost
+e <- 1e-4  # size of perturbation
+
+# an empty placeholder to store our numeric gradient values
+numgrad_djdw1 <- matrix(0, nrow = 4 , ncol = 3) 
+
+# a loop to perturb each value and store the change in cost function/size of perturbation
+for(i in 1:12){  # calculate the numeric gradient for each value in the w1 matrix
+  set.seed(1)
+  W1[i] <- W1[i] + e 
+  
+  Z2 <- X %*% W1 + J %*% t(B1)
+  A2<- sigmoid(Z2)
+  Z3 <- A2 %*% W2 + J %*% t(B2)
+  Yhat <- sigmoid(Z3)
+  numgrad_djdw1[i] <- (cost(Y,Yhat) - currentcost)/e 
+}
+
+```
+
+Now check to make sure that the values produced by the numeric gradient check match the values of the gradient as calculated by the partial derivatives which you calculated in the previous task. The match won't be perfect, but should be pretty good.
+
+```{r}
+# your code goes here
+numgrad_djdw1
+
+djdw1  
+
+#They look pretty good
+```
+
+
+## Gradient Descent
+
+## Task 7:
+
+We will now apply the gradient descent algorithm to train our network. This simply involves repeatedly taking steps in the direction opposite of the gradient. 
+
+With each iteration, you will calculate the predictions based on the current values of the model parameters. You will also calculate the values of the gradient at the current values. Take a 'step' by subtracting a scalar multiple of the gradient. And repeat.
+
+I will not specify what size scalar multiple you should use, or how many iterations need to be done. Just try things out. A simple way to see if your model is performing 'well' is to print out the predicted values of y-hat and see if they match closely to the actual values.
+
+Consult the example code in 'handwriting_ann.R' and slide 26 in lecture 4-1.
+
+```{r}
+# your code goes here
+
+set.seed(1)
+W_1 <- matrix(runif(input_layer_size*output_layer_size)-0.5, nrow = input_layer_size, ncol = hidden_layer_size)
+W_2 <- matrix(runif(hidden_layer_size*output_layer_size)-0.5, nrow = hidden_layer_size, ncol = output_layer_size)
+B_1 <- matrix(runif(hidden_layer_size)-0.5, nrow = hidden_layer_size)
+B_2 <- matrix(runif(output_layer_size)-0.5, nrow = output_layer_size)
+scalar <- 0.01
+
+for(i in 1:5000){
+  Z_2 <- X %*% W_1 + J %*% t(B_1)
+  A_2<- sigmoid(Z_2)
+  Z_3 <- A_2 %*% W_2 + J %*% t(B_2)
+  Y_hat <- sigmoid(Z_3)
+  
+  delta3 = -(Y-Y_hat)*sigmoidprime(Z_3)
+  djdw2 = t(A_2) %*% delta3
+  djdb2 = t(delta3) %*% J
+  delta2 = delta3 %*% t(W_2) * sigmoidprime(Z_2)
+  djdw1 = t(X) %*% delta2
+  djdb1 = t(delta2) %*% J
+  
+  W_1 <- W_1 - scalar*djdw1
+  B_1 <- B_1 - scalar*djdb1
+  W_2 <- W_2 - scalar*djdw2
+  B_2 <- B_2 - scalar*djdb2
+}
+
+  Z_2 <- X %*% W_1 + J %*% t(B_1)
+  A_2<- sigmoid(Z_2)
+  Z_3 <- A_2 %*% W_2 + J %*% t(B_2)
+  Y_hat <- sigmoid(Z_3)
+  
+  actualY<-rep(0,nrow(Y))
+  for(i in 1:nrow(Y)){
+    actualY[i]<-which(Y[i,]==1)
+  }
+
+  results<-cbind(max.col(Y_hat),actualY)
+  table(results[,1],results[,2])
+
+```
+
+
+## Testing our trained model
+
+Now that we have performed gradient descent and have effectively trained our model, it is time to test the performance of our network.
+
+## Task 8:
+
+Using the testing data, create predictions for the 30 observations in the test dataset. Print those results.
+
+```{r}
+# your code goes here
+Yt <- rep(0,nrow(test))
+Xt <- as.matrix(test[,1:4])
+
+
+for(i in 1:nrow(test)){
+  Yt[i]<-which(test[i,5]==TRUE)
+}
+
+J<-matrix(1,nrow = nrow(Xt))
+Z_2 <- Xt %*% W_1 + J %*% t(B_1)
+A_2<- sigmoid(Z_2)
+Z_3 <- A_2 %*% W_2 + J %*% t(B_2)
+Yt_hat <- sigmoid(Z_3)
+  
+Yt_hat
+```
+
+## Task 9:
+
+Create a confusion matrix - a table that compares the predictions to the actual values. It will be a 3x3 table, and most values should be along the diagonal. Off-diagonal elements represent errors.
+
+There is code to create a confusion matrix in 'handwriting_ann.R'
+
+```{r}
+result<-cbind(Yt,max.col(Yt_hat))
+results_table<-table(result[,1],result[,2])
+results_table
+```
+
+
+How many errors did your network make?
+It doesn't make any error.
+
+
+## Using package `nnet`
+
+While instructive, the manual creation of a neural network is seldom done in production environments.
+
+[Install the `nnet` and `NeuralNetTools` packages] Read the documentation for the function `nnet()`. I've created a neural network for predicting the iris species based on the four numeric variables. We use the same training data to train the network. The function `nnet()` is smart enough to recognize that the values in the species column are a factor and will need to expressed in 0s and 1s as we did in our manually created network.
+
+```{r}
+set.seed(1)
+n <- dim(iris)[1]
+rows <- sample(1:n, 0.8*n)
+train <- iris[rows,]
+
+library(nnet)
+library(NeuralNetTools)
+irismodel <- nnet(Species ~ Sepal.Length + Sepal.Width + Petal.Length + Petal.Width, size=3, data = train)
+```
+
+Once we have created the network with nnet, we can use the predict function to make predictions for the test data.
+
+```{r}
+plotnet(irismodel) # a plot of our network
+
+results <- max.col(predict(irismodel, iris[-rows,]))
+results_df <- data.frame(results, actual = as.numeric(iris[-rows, 5]))
+results_df
+table(results_df)
+# we can see that the predicted probability of each class matches the actual label
+```
+
+
+
+

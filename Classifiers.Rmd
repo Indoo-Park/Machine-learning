@@ -1,0 +1,467 @@
+---
+title: "Classifiers"
+author: "Indoo Park"
+
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Naive Bayes Classifier for Iris data
+
+Task: Write a function that performs Naive Bayes classification for the iris data. The function will output probabiity estimates of the species for a test case.
+
+The function will accept three inputs: a row matrix for the x values of the test case, a matrix of x values for the training data, and a vector of class labels for the training data.
+
+The function will create the probability estimates based on the training data it has been provided.
+
+Within the function use a Gaussian model and estimate the mean and standard deviation of the Gaussian populations based on the training data provided. (Hint: You have 24 parameters to estimate: the mean and standard deviation of each of the 4 variables for each of the three species. With the naive assumption, you do not have to estimate any covariances.)
+
+
+```{r, error = TRUE}
+library(dplyr)
+library(mvtnorm)
+iris_nb <- function(testx, trainx, trainy){
+  # Write your code here
+  
+  train1 <- trainx[trainy=="setosa",]
+  sep_len_mean_a <- mean(train1[,1])
+  sep_wid_mean_a <- mean(train1[,2])
+  pet_len_mean_a <- mean(train1[,3])
+  pet_wid_mean_a <- mean(train1[,4])
+
+  
+  sep_len_sd_a <- sd(train1[,1])
+  sep_wid_sd_a <- sd(train1[,2])
+  pet_len_sd_a <- sd(train1[,3])
+  pet_wid_sd_a <- sd(train1[,4])
+  
+  
+  train2 <- trainx[trainy=="versicolor",]
+  sep_len_mean_b <- mean(train2[,1])
+  sep_wid_mean_b <- mean(train2[,2])
+  pet_len_mean_b <- mean(train2[,3])
+  pet_wid_mean_b <- mean(train2[,4])
+
+  
+  
+  sep_len_sd_b <- sd(train2[,1])
+  sep_wid_sd_b <- sd(train2[,2])
+  pet_len_sd_b <- sd(train2[,3])
+  pet_wid_sd_b <- sd(train2[,4])
+  
+  train3<- trainx[trainy=="virginica",]
+  sep_len_mean_c <- mean(train3[,1])
+  sep_wid_mean_c <- mean(train3[,2])
+  pet_len_mean_c <- mean(train3[,3])
+  pet_wid_mean_c <- mean(train3[,4])
+
+  sep_len_sd_c <- sd(train3[,1])
+  sep_wid_sd_c <- sd(train3[,2])
+  pet_len_sd_c <- sd(train3[,3])
+  pet_wid_sd_c <- sd(train3[,4])
+  
+  # Prior:
+  pr1=pr2=pr3=1/3 
+  
+  # Likelihood:
+  like_1 <- dnorm(testx[1],sep_len_mean_a,sep_len_sd_a)*
+            dnorm(testx[2],sep_wid_mean_a,sep_wid_sd_a)*
+            dnorm(testx[3],pet_len_mean_a,pet_len_sd_a)*
+            dnorm(testx[4],pet_wid_mean_a,pet_wid_sd_a)
+  like_2 <- dnorm(testx[1],sep_len_mean_b,sep_len_sd_b)*
+            dnorm(testx[2],sep_wid_mean_b,sep_wid_sd_b)*
+            dnorm(testx[3],pet_len_mean_b,pet_len_sd_b)*
+            dnorm(testx[4],pet_wid_mean_b,pet_wid_sd_b)
+  like_3 <- dnorm(testx[1],sep_len_mean_c,sep_len_sd_c)*
+            dnorm(testx[2],sep_wid_mean_c,sep_wid_sd_c)*
+            dnorm(testx[3],pet_len_mean_c,pet_len_sd_c)*
+            dnorm(testx[4],pet_wid_mean_c,pet_wid_sd_c)
+  
+  # Marginal:
+  marginal <- like_1*pr1 + like_2*pr2 + like_3*pr3
+  
+  p1 <- like_1*pr1/marginal
+  p2 <- like_2*pr2/marginal
+  p3 <- like_3*pr3/marginal
+  
+  output <- c(p1,p2,p3)
+  names(output) <- c("setosa","versicolor","virginica")
+  print(output)
+}
+
+```
+
+
+```c
+### output should be a named vector that looks something like this: 
+## [these numbers are completely made up btw]
+    setosa versicolor  virginica 
+ 0.9518386  0.0255936  0.0225678
+```
+
+
+#### Testing it out
+
+```{r, error = TRUE}
+set.seed(1)
+training_rows <- c(1, 2, 3, 4, 5, 7, 8, 9, 10, 11, 12, 13, 14, 15, 18, 19, 20, 23, 25, 27, 28, 29, 30, 31, 33, 34, 35, 36, 38, 39, 40, 41, 42, 43, 44, 46, 47, 48, 49, 50, 52, 53, 54, 56, 57, 58, 59, 60, 61, 62, 63, 64, 66, 67, 68, 69, 70, 71, 72, 75, 76, 78, 79, 80, 81, 82, 83, 84, 86, 87, 88, 89, 90, 91, 92, 94, 96, 97, 98, 100, 101, 102, 103, 104, 106, 107, 108, 110, 111, 113, 114, 116, 117, 119, 120, 121, 122, 123, 125, 126, 127, 128, 129, 130, 132, 133, 135, 136, 137, 138, 139, 141, 142, 143, 144, 145, 146, 147, 148, 149)
+training_x <- as.matrix(iris[training_rows, 1:4])
+training_y <- iris[training_rows, 5]
+# test cses
+
+test_case_a <- as.matrix(iris[24, 1:4]) # true class setosa
+test_case_b <- as.matrix(iris[73, 1:4]) # true class versicolor
+test_case_c <- as.matrix(iris[124, 1:4]) # true class virginica
+
+# class predictions of test cases
+iris_nb(test_case_a, training_x, training_y)
+iris_nb(test_case_b, training_x, training_y)
+iris_nb(test_case_c, training_x, training_y)
+```
+
+```{r, error = TRUE}
+# should work and produce slightly different estimates based on new training data
+set.seed(10)
+training_rows2 <- c(2, 4, 5, 9, 10, 11, 12, 13, 16, 18, 21, 22, 23, 26, 27, 31, 33, 36, 39, 41, 42, 44, 45, 49, 50, 51, 53, 55, 58, 60, 62, 64, 67, 68, 69, 71, 74, 75, 76, 80, 83, 84, 86, 87, 88, 89, 92, 93, 94, 97, 102, 103, 105, 107, 109, 112, 115, 116, 117, 118, 120, 121, 123, 127, 131, 132, 133, 137, 138, 140, 143, 144, 145, 146, 150)
+training_x2 <- as.matrix(iris[training_rows2, 1:4])
+training_y2 <- iris[training_rows2, 5]
+
+iris_nb(test_case_a, training_x2, training_y2)
+iris_nb(test_case_b, training_x2, training_y2)
+iris_nb(test_case_c, training_x2, training_y2)
+```
+
+### Naive Bayes with R
+
+While instructive and education (I hope) to write your own NaiveBayes function, in practical settings, I recommend using the production ready code from some time-tested packages.
+
+I've included some code for using the `naiveBayes()` function that is part of the `e1071` package. No need to modify anything. The results prediced by `naiveBayes()` should match the results from the function you wrote.
+
+```{r}
+# code provided. no need to edit. These results should match your results above.
+library(e1071)
+nb_model1 <- naiveBayes(training_x, training_y)
+predict(nb_model1, newdata = test_case_a, type = 'raw')
+predict(nb_model1, newdata = test_case_b, type = 'raw')
+predict(nb_model1, newdata = test_case_c, type = 'raw')
+
+nb_model2 <- naiveBayes(training_x2, training_y2)
+predict(nb_model2, newdata = test_case_a, type = 'raw')
+predict(nb_model2, newdata = test_case_b, type = 'raw')
+predict(nb_model2, newdata = test_case_c, type = 'raw')
+```
+
+
+# K-nearest neighbors Classifier for the Iris data
+
+Task: Write a classifier using the K-nearest neighbors algorithm for the iris data set.
+
+First write a function that will calculate the euclidean distance from a vector A (in 4-dimensional space) to another vector B (also in 4-dimensional space).
+
+Use that function to find the k nearest neighbors to then make a classification.
+
+The function will accept four inputs: a row matrix for the x values of the test case, a matrix of x values for the training data, a vector of class labels for the training data, and the k parameter.
+
+The function will return a single label.
+
+
+```{r, error = TRUE}
+distance <- function(a, b){
+  # Write your code here
+ sqrt((a[1]-b[1])^2 + (a[2]-b[2])^2 + (a[3]-b[3])^2 + (a[4]-b[4])^2)
+}
+
+iris_knn <- function(testx, trainx, trainy, k){
+  # Write your code here
+  dis<- rep(NA,nrow(trainx))
+  for(i in 1:nrow(trainx)){
+    dis[i]<- distance(testx,trainx[i,])
+  }
+  species<-order(dis)[1:k]
+  result <- trainy[species] %>% table()
+  names(result[which.max(result)])
+  
+}
+
+```
+
+
+```{r, error = TRUE}
+iris_knn(test_case_a, training_x, training_y, 5)
+iris_knn(test_case_b, training_x, training_y, 5) # will incorrectly label as virginica with this training data
+iris_knn(test_case_c, training_x, training_y, 5)
+
+iris_knn(test_case_a, training_x2, training_y2, 5)
+iris_knn(test_case_b, training_x2, training_y2, 5)
+iris_knn(test_case_c, training_x2, training_y2, 5) # will incorrectly label as versicolor with this training data
+
+```
+
+
+### KNN with R
+
+Again, if you plan on using KNN in real-life, use a function from a package.
+
+I've included some code for using the `knn()` function that is part of the `class` package. No need to modify anything. The results prediced by `knn()` should match the results from the function you wrote, including the misclassification of some of the test cases based on the training data.
+
+```{r}
+library(class)
+knn(train = training_x, cl = training_y, test = test_case_a, k = 5)
+knn(train = training_x, cl = training_y, test = test_case_b, k = 5) # will incorrectly label as virginica with this training data
+knn(train = training_x, cl = training_y, test = test_case_c, k = 5)
+
+knn(train = training_x2, cl = training_y2, test = test_case_a, k = 5)
+knn(train = training_x2, cl = training_y2, test = test_case_b, k = 5)
+knn(train = training_x2, cl = training_y2, test = test_case_c, k = 5) # will incorrectly label as versicolor with this training data
+```
+
+
+## SVM 
+
+Manual implementation of SVM is a bit of a pain (quadratic programming is hard), and I will not include it in the hw.
+
+For the interested student, I refer them to the code from book's companion github repository: https://github.com/sdrogers/fcmlcode/blob/master/R/chapter5/svmhard.R and this post on stackexchange: https://stats.stackexchange.com/questions/179900/optimizing-a-support-vector-machine-with-quadratic-programming
+
+Instead, I will use an example of a mixture model that can be separated via SVM.
+
+The mixture model comes from the excellent (but advanced) textbook, *The Elements of Statistical Learning*, which is made to be freely available by the authors at: https://web.stanford.edu/~hastie/ElemStatLearn/
+
+```{r}
+#install.packages("ElemStatLearn")
+library(ElemStatLearn)
+data(mixture.example)
+df <- data.frame(mixture.example$x, y = as.factor(mixture.example$y)) # turn the data into a dataframe
+plot(df$X1,df$X2, col = df$y, pch = 19) # create a plot of the mixture
+```
+
+
+We will use the `svm()` function available in package `e1071`. 
+
+Read the documentation on the function `svm()`.
+
+For the following models, we will use a **radial-basis function**, which is equivalent to using a Gaussian Kernel function. (The Gaussian Kernel function projects the 2-dimensional data into infinite dimensional space and takes the inner product of these infinite dimensional vectors. It doesn't actually do this, but the resulting inner product can be found and used to draw a decision boundary.)
+
+The svm function allows for multiple arguments, but we will focus on the effect of the arguments for gamma and cost.
+
+I have created 9 classification models using SVM and different values of gamma and cost.
+
+Pay attention to the values of `gamma` and `cost`. At the very end comment on the effect of each parameter on the resulting model.
+
+```{r}
+library(e1071)
+model <- svm(y ~ . , data = df, scale = FALSE, kernel = "radial", gamma = 1, cost = 1)
+```
+
+```{r, echo = FALSE}
+# Credit to this tutorial by James Le https://www.datacamp.com/community/tutorials/support-vector-machines-r
+
+## used to create a grid of red/black points 
+x1range <- seq(-3,4.2,by = 0.1); x2range <- seq(-2,3,by = 0.1)
+xgrid <- expand.grid(X1 = x1range, X2 = x2range)
+ygrid <- predict(model, xgrid, decision.values = TRUE)
+
+# extract svm's decision values for each point, which will be used to draw contour lines
+decision_vals = attributes(ygrid)$decision
+
+plot(xgrid, col = as.numeric(ygrid), pch = 20, cex = .2) # plot the grid of points colored by the decision
+points(df$X1, df$X2, col = df$y, pch = 19) # add the points in the original data
+
+## add some contour lines
+contour(x1range, x2range, matrix(decision_vals, nrow = length(x1range)), level = 0, add = TRUE, lwd = 2)
+contour(x1range, x2range, matrix(decision_vals, nrow = length(x1range)), level = 0.5, add = TRUE, col = "black")
+contour(x1range, x2range, matrix(decision_vals, nrow = length(x1range)), level = -0.5, add = TRUE, col = "red")
+```
+
+```{r}
+model <- svm(y ~ . , data = df, scale = FALSE, kernel = "radial", gamma = 1, cost = 0.1)
+```
+
+```{r, echo = FALSE}
+## used to create a grid of red/black points 
+x1range <- seq(-3,4.2,by = 0.1); x2range <- seq(-2,3,by = 0.1)
+xgrid <- expand.grid(X1 = x1range, X2 = x2range)
+ygrid <- predict(model, xgrid, decision.values = TRUE)
+
+# extract svm's decision values for each point, which will be used to draw contour lines
+decision_vals = attributes(ygrid)$decision
+
+plot(xgrid, col = as.numeric(ygrid), pch = 20, cex = .2) # plot the grid of points colored by the decision
+points(df$X1, df$X2, col = df$y, pch = 19) # add the points in the original data
+
+## add some contour lines
+contour(x1range, x2range, matrix(decision_vals, nrow = length(x1range)), level = 0, add = TRUE, lwd = 2)
+contour(x1range, x2range, matrix(decision_vals, nrow = length(x1range)), level = 0.5, add = TRUE, col = "black")
+contour(x1range, x2range, matrix(decision_vals, nrow = length(x1range)), level = -0.5, add = TRUE, col = "red")
+```
+
+
+```{r}
+model <- svm(y ~ . , data = df, scale = FALSE, kernel = "radial", gamma = 1, cost = 10)
+```
+
+```{r, echo = FALSE}
+## used to create a grid of red/black points 
+x1range <- seq(-3,4.2,by = 0.1); x2range <- seq(-2,3,by = 0.1)
+xgrid <- expand.grid(X1 = x1range, X2 = x2range)
+ygrid <- predict(model, xgrid, decision.values = TRUE)
+
+# extract svm's decision values for each point, which will be used to draw contour lines
+decision_vals = attributes(ygrid)$decision
+
+plot(xgrid, col = as.numeric(ygrid), pch = 20, cex = .2) # plot the grid of points colored by the decision
+points(df$X1, df$X2, col = df$y, pch = 19) # add the points in the original data
+
+## add some contour lines
+contour(x1range, x2range, matrix(decision_vals, nrow = length(x1range)), level = 0, add = TRUE, lwd = 2)
+contour(x1range, x2range, matrix(decision_vals, nrow = length(x1range)), level = 0.5, add = TRUE, col = "black")
+contour(x1range, x2range, matrix(decision_vals, nrow = length(x1range)), level = -0.5, add = TRUE, col = "red")
+
+```
+
+
+```{r}
+model <- svm(y ~ . , data = df, scale = FALSE, kernel = "radial", gamma = 0.5, cost = 1)
+```
+
+```{r, echo = FALSE}
+## used to create a grid of red/black points 
+x1range <- seq(-3,4.2,by = 0.1); x2range <- seq(-2,3,by = 0.1)
+xgrid <- expand.grid(X1 = x1range, X2 = x2range)
+ygrid <- predict(model, xgrid, decision.values = TRUE)
+
+# extract svm's decision values for each point, which will be used to draw contour lines
+decision_vals = attributes(ygrid)$decision
+
+plot(xgrid, col = as.numeric(ygrid), pch = 20, cex = .2) # plot the grid of points colored by the decision
+points(df$X1, df$X2, col = df$y, pch = 19) # add the points in the original data
+
+## add some contour lines
+contour(x1range, x2range, matrix(decision_vals, nrow = length(x1range)), level = 0, add = TRUE, lwd = 2)
+contour(x1range, x2range, matrix(decision_vals, nrow = length(x1range)), level = 0.5, add = TRUE, col = "black")
+contour(x1range, x2range, matrix(decision_vals, nrow = length(x1range)), level = -0.5, add = TRUE, col = "red")
+```
+
+```{r}
+model <- svm(y ~ . , data = df, scale = FALSE, kernel = "radial", gamma = 0.5, cost = 0.10)
+```
+
+```{r, echo = FALSE}
+## used to create a grid of red/black points 
+x1range <- seq(-3,4.2,by = 0.1); x2range <- seq(-2,3,by = 0.1)
+xgrid <- expand.grid(X1 = x1range, X2 = x2range)
+ygrid <- predict(model, xgrid, decision.values = TRUE)
+
+# extract svm's decision values for each point, which will be used to draw contour lines
+decision_vals = attributes(ygrid)$decision
+
+plot(xgrid, col = as.numeric(ygrid), pch = 20, cex = .2) # plot the grid of points colored by the decision
+points(df$X1, df$X2, col = df$y, pch = 19) # add the points in the original data
+
+## add some contour lines
+contour(x1range, x2range, matrix(decision_vals, nrow = length(x1range)), level = 0, add = TRUE, lwd = 2)
+contour(x1range, x2range, matrix(decision_vals, nrow = length(x1range)), level = 0.5, add = TRUE, col = "black")
+contour(x1range, x2range, matrix(decision_vals, nrow = length(x1range)), level = -0.5, add = TRUE, col = "red")
+```
+
+
+```{r}
+model <- svm(y ~ . , data = df, scale = FALSE, kernel = "radial", gamma = 0.5, cost = 10)
+```
+
+```{r, echo = FALSE}
+## used to create a grid of red/black points 
+x1range <- seq(-3,4.2,by = 0.1); x2range <- seq(-2,3,by = 0.1)
+xgrid <- expand.grid(X1 = x1range, X2 = x2range)
+ygrid <- predict(model, xgrid, decision.values = TRUE)
+
+# extract svm's decision values for each point, which will be used to draw contour lines
+decision_vals = attributes(ygrid)$decision
+
+plot(xgrid, col = as.numeric(ygrid), pch = 20, cex = .2) # plot the grid of points colored by the decision
+points(df$X1, df$X2, col = df$y, pch = 19) # add the points in the original data
+
+## add some contour lines
+contour(x1range, x2range, matrix(decision_vals, nrow = length(x1range)), level = 0, add = TRUE, lwd = 2)
+contour(x1range, x2range, matrix(decision_vals, nrow = length(x1range)), level = 0.5, add = TRUE, col = "black")
+contour(x1range, x2range, matrix(decision_vals, nrow = length(x1range)), level = -0.5, add = TRUE, col = "red")
+```
+
+
+```{r}
+model <- svm(y ~ . , data = df, scale = FALSE, kernel = "radial", gamma = 5, cost = 1)
+```
+
+```{r, echo = FALSE}
+## used to create a grid of red/black points 
+x1range <- seq(-3,4.2,by = 0.1); x2range <- seq(-2,3,by = 0.1)
+xgrid <- expand.grid(X1 = x1range, X2 = x2range)
+ygrid <- predict(model, xgrid, decision.values = TRUE)
+
+# extract svm's decision values for each point, which will be used to draw contour lines
+decision_vals = attributes(ygrid)$decision
+
+plot(xgrid, col = as.numeric(ygrid), pch = 20, cex = .2) # plot the grid of points colored by the decision
+points(df$X1, df$X2, col = df$y, pch = 19) # add the points in the original data
+
+## add some contour lines
+contour(x1range, x2range, matrix(decision_vals, nrow = length(x1range)), level = 0, add = TRUE, lwd = 2)
+contour(x1range, x2range, matrix(decision_vals, nrow = length(x1range)), level = 0.5, add = TRUE, col = "black")
+contour(x1range, x2range, matrix(decision_vals, nrow = length(x1range)), level = -0.5, add = TRUE, col = "red")
+```
+
+
+```{r}
+model <- svm(y ~ . , data = df, scale = FALSE, kernel = "radial", gamma = 5, cost = 0.1)
+```
+
+```{r, echo = FALSE}
+## used to create a grid of red/black points 
+x1range <- seq(-3,4.2,by = 0.1); x2range <- seq(-2,3,by = 0.1)
+xgrid <- expand.grid(X1 = x1range, X2 = x2range)
+ygrid <- predict(model, xgrid, decision.values = TRUE)
+
+# extract svm's decision values for each point, which will be used to draw contour lines
+decision_vals = attributes(ygrid)$decision
+
+plot(xgrid, col = as.numeric(ygrid), pch = 20, cex = .2) # plot the grid of points colored by the decision
+points(df$X1, df$X2, col = df$y, pch = 19) # add the points in the original data
+
+## add some contour lines
+contour(x1range, x2range, matrix(decision_vals, nrow = length(x1range)), level = 0, add = TRUE, lwd = 2)
+contour(x1range, x2range, matrix(decision_vals, nrow = length(x1range)), level = 0.5, add = TRUE, col = "black")
+contour(x1range, x2range, matrix(decision_vals, nrow = length(x1range)), level = -0.5, add = TRUE, col = "red")
+```
+
+```{r}
+model <- svm(y ~ . , data = df, scale = FALSE, kernel = "radial", gamma = 5, cost = 10)
+```
+
+```{r, echo = FALSE}
+## used to create a grid of red/black points 
+x1range <- seq(-3,4.2,by = 0.1); x2range <- seq(-2,3,by = 0.1)
+xgrid <- expand.grid(X1 = x1range, X2 = x2range)
+ygrid <- predict(model, xgrid, decision.values = TRUE)
+
+# extract svm's decision values for each point, which will be used to draw contour lines
+decision_vals = attributes(ygrid)$decision
+
+plot(xgrid, col = as.numeric(ygrid), pch = 20, cex = .2) # plot the grid of points colored by the decision
+points(df$X1, df$X2, col = df$y, pch = 19) # add the points in the original data
+
+## add some contour lines
+contour(x1range, x2range, matrix(decision_vals, nrow = length(x1range)), level = 0, add = TRUE, lwd = 2)
+contour(x1range, x2range, matrix(decision_vals, nrow = length(x1range)), level = 0.5, add = TRUE, col = "black")
+contour(x1range, x2range, matrix(decision_vals, nrow = length(x1range)), level = -0.5, add = TRUE, col = "red")
+```
+
+#### Write about the effect of the cost paramter:
+The cost parameter adjusts how hard or soft our large margin classification should be.
+With a low cost parameter, samples inside the margins are penalized less than with a higher cost parameter. With a cost of 0, samples inside the margins are not penalized anymore, and with infinite cost you have the other possible extreme of hard margins.
+
+
+#### Write about the effect of the gamma parameter:
+The gamma parameter defines how far the influence of a single training example reaches, with low values meaning 'far' and high values meaning 'close'. The small gamma affects points far away from the decision boundary is large, so it makes the boundary much smoother. The large gamma only affect the points near the decision boundary is large, so it makes the boundary less smoother and more complex.
+
